@@ -29,7 +29,6 @@ struct BlocoOrdenado
   unsigned char hashAnterior[SHA256_DIGEST_LENGTH];
   BlocoMinerado *enderecoBlocoMinerado;
   struct BlocoOrdenado *prox;
-  struct BlocoOrdenado *ant;
 };
 
 typedef struct BlocoOrdenado BlocoOrdenado;
@@ -49,6 +48,9 @@ int somaTotalBitcoin(BlocoMinerado *primeiroBloco);
 void ordenaBlocoEmOrdemCrescente(BlocoMinerado *primeiroBloco, BlocoOrdenado **primeiroBlocoOrdenado);
 void insereBlocoOrdenado(BlocoMinerado *blocoAtual, BlocoOrdenado **primeiroBlocoOrdenado, int totalBitcoinAtual);
 void imprimeBlocosOrdenados(BlocoOrdenado *primeiroBlocoOrdenado);
+void insereBlocoOrdenadoNoInicio(BlocoOrdenado **primeiroBlocoOrdenado, int totalBitcoinAtual, BlocoMinerado *blocoAtual);
+void insereBlocoOrdenadoDepois(BlocoOrdenado *blocoOrdenadoAtual, int totalBitcoinAtual, BlocoMinerado *blocoAtual);
+void insereBlocoOrdenadoFim(BlocoOrdenado *ultimoBloco, int totalBitcoinAtual, BlocoMinerado *blocoAtual);
 
 int main()
 {
@@ -289,10 +291,10 @@ int somaTotalBitcoin(BlocoMinerado *primeiroBloco)
 
   return total;
 }
-
+int globaCount = 1;
 void ordenaBlocoEmOrdemCrescente(BlocoMinerado *primeiroBloco, BlocoOrdenado **primeiroBlocoOrdenado)
 {
-  printf("- oi -");
+
   if (primeiroBloco == NULL)
   {
     return;
@@ -305,48 +307,56 @@ void ordenaBlocoEmOrdemCrescente(BlocoMinerado *primeiroBloco, BlocoOrdenado **p
   ordenaBlocoEmOrdemCrescente(primeiroBloco->prox, primeiroBlocoOrdenado);
 }
 
+void insereBlocoOrdenadoNoInicio(BlocoOrdenado **primeiroBlocoOrdenado, int totalBitcoinAtual, BlocoMinerado *blocoAtual)
+{
+  BlocoOrdenado *novoBlocoOrdenado = malloc(sizeof(BlocoOrdenado));
+  novoBlocoOrdenado->prox = *primeiroBlocoOrdenado;
+  novoBlocoOrdenado->totalBitcoin = totalBitcoinAtual;
+  novoBlocoOrdenado->enderecoBlocoMinerado = blocoAtual;
+  *primeiroBlocoOrdenado = novoBlocoOrdenado;
+}
+
+void insereBlocoOrdenadoDepois(BlocoOrdenado *blocoOrdenadoAtual, int totalBitcoinAtual, BlocoMinerado *blocoAtual)
+{
+  BlocoOrdenado *novoBlocoOrdenado = malloc(sizeof(BlocoOrdenado));
+  novoBlocoOrdenado->prox = blocoOrdenadoAtual->prox;
+  novoBlocoOrdenado->totalBitcoin = totalBitcoinAtual;
+  novoBlocoOrdenado->enderecoBlocoMinerado = blocoAtual;
+
+  blocoOrdenadoAtual->prox = novoBlocoOrdenado;
+}
+
+void insereBlocoOrdenadoFim(BlocoOrdenado *ultimoBloco, int totalBitcoinAtual, BlocoMinerado *blocoAtual)
+{
+  BlocoOrdenado *novoBlocoOrdenado = malloc(sizeof(BlocoOrdenado));
+  novoBlocoOrdenado->prox = NULL;
+  novoBlocoOrdenado->totalBitcoin = totalBitcoinAtual;
+  novoBlocoOrdenado->enderecoBlocoMinerado = blocoAtual;
+
+  ultimoBloco->prox = novoBlocoOrdenado;
+}
+
 void insereBlocoOrdenado(BlocoMinerado *blocoAtual, BlocoOrdenado **primeiroBlocoOrdenado, int totalBitcoinAtual)
 {
 
-  if (*primeiroBlocoOrdenado == NULL)
+  if (*primeiroBlocoOrdenado == NULL || totalBitcoinAtual <= (*primeiroBlocoOrdenado)->totalBitcoin)
   {
-    BlocoOrdenado *novoBlocoOrdenado = malloc(sizeof(BlocoOrdenado));
-    novoBlocoOrdenado->ant = NULL;
-    novoBlocoOrdenado->prox = NULL;
-    novoBlocoOrdenado->totalBitcoin = totalBitcoinAtual;
-    novoBlocoOrdenado->enderecoBlocoMinerado = blocoAtual;
-    *primeiroBlocoOrdenado = novoBlocoOrdenado;
+    insereBlocoOrdenadoNoInicio(primeiroBlocoOrdenado, totalBitcoinAtual, blocoAtual);
     return;
   }
 
-  if (&(*primeiroBlocoOrdenado)->prox == NULL)
+  BlocoOrdenado *blocoAuxiliar = *primeiroBlocoOrdenado;
+
+  while (blocoAuxiliar->prox != NULL)
   {
-    BlocoOrdenado *novoBlocoOrdenado = malloc(sizeof(BlocoOrdenado));
-    novoBlocoOrdenado->ant = *primeiroBlocoOrdenado;
-    novoBlocoOrdenado->prox = NULL;
-    novoBlocoOrdenado->totalBitcoin = totalBitcoinAtual;
-    novoBlocoOrdenado->enderecoBlocoMinerado = blocoAtual;
-  }
-
-  // insere no ínicio quando o numero atual de bitcoin é menor ou igual
-  if (totalBitcoinAtual <= (*primeiroBlocoOrdenado)->totalBitcoin)
-  {
-    BlocoOrdenado *novoBlocoOrdenado = malloc(sizeof(BlocoOrdenado));
-    novoBlocoOrdenado->totalBitcoin = totalBitcoinAtual;
-    novoBlocoOrdenado->enderecoBlocoMinerado = blocoAtual;
-    novoBlocoOrdenado->ant = (*primeiroBlocoOrdenado)->ant;
-    novoBlocoOrdenado->prox = *primeiroBlocoOrdenado;
-
-    (*primeiroBlocoOrdenado)->ant = novoBlocoOrdenado;
-
-    if ((*primeiroBlocoOrdenado)->ant != NULL)
+    if (totalBitcoinAtual <= blocoAuxiliar->prox->totalBitcoin)
     {
-      (*primeiroBlocoOrdenado)->ant->prox = novoBlocoOrdenado;
+      insereBlocoOrdenadoDepois(blocoAuxiliar, totalBitcoinAtual, blocoAtual);
+      return;
     }
 
-    *primeiroBlocoOrdenado = novoBlocoOrdenado;
-    return;
+    blocoAuxiliar = blocoAuxiliar->prox;
   }
 
-  insereBlocoOrdenado(blocoAtual, &(*primeiroBlocoOrdenado)->prox, totalBitcoinAtual);
+  insereBlocoOrdenadoFim(blocoAuxiliar, totalBitcoinAtual, blocoAtual);
 }
