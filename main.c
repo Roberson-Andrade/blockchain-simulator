@@ -8,17 +8,17 @@ int NUMERO_TOTAL_DE_BLOCOS = 100000;
 
 struct BlocoNaoMinerado
 {
-  unsigned int numero;                              // 4
-  unsigned int nonce;                               // 4
-  unsigned char data[184];                          // nao alterar. Deve ser inicializado com zeros.
-  unsigned char hashAnterior[SHA256_DIGEST_LENGTH]; // 32
+  unsigned int numero;
+  unsigned int nonce;
+  unsigned char data[184];
+  unsigned char hashAnterior[SHA256_DIGEST_LENGTH];
 };
 typedef struct BlocoNaoMinerado BlocoNaoMinerado;
 
 struct BlocoMinerado
 {
   BlocoNaoMinerado bloco;
-  unsigned char hash[SHA256_DIGEST_LENGTH]; // 32 bytes
+  unsigned char hash[SHA256_DIGEST_LENGTH];
   struct BlocoMinerado *prox;
 };
 typedef struct BlocoMinerado BlocoMinerado;
@@ -34,36 +34,39 @@ struct BlocoOrdenado
 typedef struct BlocoOrdenado BlocoOrdenado;
 
 void imprimeHash(unsigned char hash[], int length);
-void imprimeDados(BlocoNaoMinerado *blocoAMinerar);
-
 void minerarBloco();
 void calculaTransacoes(BlocoNaoMinerado *blocoAMinerar, MTRand *randNumber);
 void preencheHashAnterior(BlocoNaoMinerado *blocoAMinerar);
 void mineraBlocos(BlocoMinerado **primeiroBloco);
 void validaBloco(BlocoNaoMinerado *blocoAMinerar, BlocoMinerado **primeiroBloco);
 void insereBlocoMinerado(BlocoMinerado **primeiroBloco, BlocoNaoMinerado blocoRecemMinerado, unsigned char hash[]);
-void imprimeBlocos(BlocoMinerado *primeiroBloco);
 void buscaBloco(BlocoMinerado *primeiroBloco, int numeroDoBloco);
 int somaTotalBitcoin(BlocoMinerado *primeiroBloco);
 void ordenaBlocoEmOrdemCrescente(BlocoMinerado *primeiroBloco, BlocoOrdenado **primeiroBlocoOrdenado);
 void insereBlocoOrdenado(BlocoMinerado *blocoAtual, BlocoOrdenado **primeiroBlocoOrdenado, int totalBitcoinAtual);
-void imprimeBlocosOrdenados(BlocoOrdenado *primeiroBlocoOrdenado);
 void insereBlocoOrdenadoNoInicio(BlocoOrdenado **primeiroBlocoOrdenado, int totalBitcoinAtual, BlocoMinerado *blocoAtual);
 void insereBlocoOrdenadoDepois(BlocoOrdenado *blocoOrdenadoAtual, int totalBitcoinAtual, BlocoMinerado *blocoAtual);
 void insereBlocoOrdenadoFim(BlocoOrdenado *ultimoBloco, int totalBitcoinAtual, BlocoMinerado *blocoAtual);
+void imprimeBlocosOrdenadosCrescente(BlocoOrdenado *primeiroBlocoOrdenado);
+void imprimeBlocosOrdenadosDecrescente(BlocoOrdenado *primeiroBlocoOrdenado);
+void imprimeBlocos(BlocoMinerado *primeiroBloco);
 
 int main()
 {
   BlocoMinerado *primeiroBloco = NULL;
+  BlocoOrdenado *primeiroBlocoOrdenado = NULL;
+
   mineraBlocos(&primeiroBloco);
+  ordenaBlocoEmOrdemCrescente(primeiroBloco, &primeiroBlocoOrdenado);
 
   int escolha;
 
   do
   {
-    printf("[1] Buscar o hash pelo numero do bloco.\n");
+    printf("\n[1] Buscar o hash pelo numero do bloco.\n");
     printf("[2] Listar os blocos por total de bitcoin em ordem crescente.\n");
-    printf("[0] Sair\n");
+    printf("[3] Listar os blocos por total de bitcoin em ordem decrescente.\n");
+    printf("[0] Sair\n\n");
     scanf("%d", &escolha);
 
     switch (escolha)
@@ -79,12 +82,18 @@ int main()
 
     case 2:
     {
-      BlocoOrdenado *primeiroBlocoOrdenado = NULL;
-
-      ordenaBlocoEmOrdemCrescente(primeiroBloco, &primeiroBlocoOrdenado);
-      imprimeBlocosOrdenados(primeiroBlocoOrdenado);
+      imprimeBlocosOrdenadosCrescente(primeiroBlocoOrdenado);
       break;
     }
+
+    case 3:
+    {
+      imprimeBlocosOrdenadosDecrescente(primeiroBlocoOrdenado);
+      break;
+    }
+
+    case 0:
+      break;
 
     default:
       printf("Opcao invalida!\n");
@@ -103,15 +112,19 @@ void mineraBlocos(BlocoMinerado **primeiroBloco)
 {
 
   BlocoNaoMinerado blocoAMinerar;
-  unsigned char *hashAnterior = NULL;
+  MTRand randNumber = seedRand(1234567);
 
-  MTRand randNumber = seedRand(1234567); // objeto gerador com semente 1234567
-
-  for (int i = 0; i < 100; i++)
+  for (int i = 0; i < NUMERO_TOTAL_DE_BLOCOS; i++)
   {
-
-    printf("\n\n BLOCO %d - ESTÁ SENDO MINERADO \n\n", i);
     blocoAMinerar.numero = i + 1;
+
+    if (blocoAMinerar.numero == 1)
+    {
+      for (int i = 0; i < SHA256_DIGEST_LENGTH; i++)
+      {
+        blocoAMinerar.hashAnterior[i] = 0;
+      }
+    }
 
     calculaTransacoes(&blocoAMinerar, &randNumber);
     validaBloco(&blocoAMinerar, primeiroBloco);
@@ -127,15 +140,13 @@ void mineraBlocos(BlocoMinerado **primeiroBloco)
 void calculaTransacoes(BlocoNaoMinerado *blocoAMinerar, MTRand *randNumber)
 {
 
-  unsigned char qtdTransacoes = (unsigned char)(1 + (genRandLong(randNumber) % 61)); // gera aleatorio de 1 a 61
-
-  printf("qtdTransacoes: %d\n", qtdTransacoes);
+  unsigned char qtdTransacoes = (unsigned char)(1 + (genRandLong(randNumber) % 61));
 
   for (int i = 0; i < qtdTransacoes; i++)
   {
     unsigned char endOrigem = (unsigned char)genRandLong(randNumber) % 256;
     unsigned char endDst = (unsigned char)genRandLong(randNumber) % 256;
-    unsigned char qtdBitcoin = (unsigned char)genRandLong(randNumber) % 50;
+    unsigned char qtdBitcoin = (unsigned char)(1 + genRandLong(randNumber) % 50);
 
     int dataPosition = i * 3;
 
@@ -170,8 +181,6 @@ void validaBloco(BlocoNaoMinerado *blocoAMinerar, BlocoMinerado **primeiroBloco)
 
     nounceCount++;
   } while (hash[0] != 0 || hash[1] != 0);
-  printf("Primeiros valores: %d %d\n", hash[0], hash[1]);
-  printf("\n\n\n SUCESSO \n\n\n");
 
   insereBlocoMinerado(primeiroBloco, *blocoAMinerar, hash);
 }
@@ -211,6 +220,12 @@ void insereBlocoMinerado(BlocoMinerado **primeiroBloco, BlocoNaoMinerado blocoRe
   *primeiroBloco = novoBloco;
 }
 
+/**
+ * @brief Imprime na tela um hash
+ *
+ * @param hash
+ * @param length
+ */
 void imprimeHash(unsigned char hash[], int length)
 {
   int i;
@@ -221,40 +236,64 @@ void imprimeHash(unsigned char hash[], int length)
   printf("\n");
 }
 
-void imprimeDados(BlocoNaoMinerado *blocoAMinerar)
-{
-  size_t dataLength = sizeof(blocoAMinerar->data) / sizeof(blocoAMinerar->data[0]);
-
-  for (int i = 0; i < dataLength; i++)
-  {
-    printf("%d, ", blocoAMinerar->data[i]);
-  }
-}
-
-void imprimeBlocosOrdenados(BlocoOrdenado *primeiroBlocoOrdenado)
-{
-  int count = 1;
-  do
-  {
-
-    printf("bloco numero: %d; bitcoin: %d;\n", count, primeiroBlocoOrdenado->totalBitcoin);
-
-    primeiroBlocoOrdenado = primeiroBlocoOrdenado->prox;
-    count++;
-  } while (primeiroBlocoOrdenado != NULL);
-}
-
+/**
+ * @brief Imprime todos os blocos minerados em tela
+ *
+ * @param primeiroBloco
+ */
 void imprimeBlocos(BlocoMinerado *primeiroBloco)
 {
-  do
+
+  if (primeiroBloco == NULL)
   {
+    return;
+  }
 
-    printf("%d", primeiroBloco->bloco.numero);
-
-    primeiroBloco = primeiroBloco->prox;
-  } while (primeiroBloco != NULL);
+  imprimeBlocos(primeiroBloco->prox);
+  printf("Bloco: %d hash: ", primeiroBloco->bloco.numero);
+  imprimeHash(primeiroBloco->hash, SHA256_DIGEST_LENGTH);
 }
 
+/**
+ * @brief Imprime blocos ordenados em forma crescente
+ *
+ * @param primeiroBlocoOrdenado
+ */
+void imprimeBlocosOrdenadosCrescente(BlocoOrdenado *primeiroBlocoOrdenado)
+{
+
+  if (primeiroBlocoOrdenado == NULL)
+  {
+    return;
+  }
+
+  printf("Bloco: %d bitcoin: %d\n", primeiroBlocoOrdenado->totalBitcoin, primeiroBlocoOrdenado->totalBitcoin);
+  imprimeBlocosOrdenadosCrescente(primeiroBlocoOrdenado->prox);
+}
+
+/**
+ * @brief Imprime blocos ordenados em forma crescente
+ *
+ * @param primeiroBlocoOrdenado
+ */
+void imprimeBlocosOrdenadosDecrescente(BlocoOrdenado *primeiroBlocoOrdenado)
+{
+
+  if (primeiroBlocoOrdenado == NULL)
+  {
+    return;
+  }
+
+  imprimeBlocosOrdenadosDecrescente(primeiroBlocoOrdenado->prox);
+  printf("Endereco: %p bitcoin: %d\n", primeiroBlocoOrdenado->enderecoBlocoMinerado, primeiroBlocoOrdenado->totalBitcoin);
+}
+
+/**
+ * @brief Busca um bloco na lista encadeada pelo seu número com recursividade
+ *
+ * @param primeiroBloco
+ * @param numeroDoBloco
+ */
 void buscaBloco(BlocoMinerado *primeiroBloco, int numeroDoBloco)
 {
   if (primeiroBloco == NULL)
@@ -274,6 +313,12 @@ void buscaBloco(BlocoMinerado *primeiroBloco, int numeroDoBloco)
   buscaBloco(primeiroBloco->prox, numeroDoBloco);
 }
 
+/**
+ * @brief Calcula e retorna o numero total de bitcoins de um determinado bloco minerado
+ *
+ * @param primeiroBloco
+ * @return int
+ */
 int somaTotalBitcoin(BlocoMinerado *primeiroBloco)
 {
   int total = 0;
@@ -291,7 +336,13 @@ int somaTotalBitcoin(BlocoMinerado *primeiroBloco)
 
   return total;
 }
-int globaCount = 1;
+
+/**
+ * @brief Cria uma nova lista encadeada ordenada a partir dos blocos minerados
+ *
+ * @param primeiroBloco
+ * @param primeiroBlocoOrdenado
+ */
 void ordenaBlocoEmOrdemCrescente(BlocoMinerado *primeiroBloco, BlocoOrdenado **primeiroBlocoOrdenado)
 {
 
@@ -307,6 +358,13 @@ void ordenaBlocoEmOrdemCrescente(BlocoMinerado *primeiroBloco, BlocoOrdenado **p
   ordenaBlocoEmOrdemCrescente(primeiroBloco->prox, primeiroBlocoOrdenado);
 }
 
+/**
+ * @brief Insere novo bloco ordenado no início
+ *
+ * @param primeiroBlocoOrdenado
+ * @param totalBitcoinAtual
+ * @param blocoAtual
+ */
 void insereBlocoOrdenadoNoInicio(BlocoOrdenado **primeiroBlocoOrdenado, int totalBitcoinAtual, BlocoMinerado *blocoAtual)
 {
   BlocoOrdenado *novoBlocoOrdenado = malloc(sizeof(BlocoOrdenado));
@@ -316,6 +374,13 @@ void insereBlocoOrdenadoNoInicio(BlocoOrdenado **primeiroBlocoOrdenado, int tota
   *primeiroBlocoOrdenado = novoBlocoOrdenado;
 }
 
+/**
+ * @brief Insere bloco ordenado depois de qualquer bloco indicado na lista
+ *
+ * @param blocoOrdenadoAtual
+ * @param totalBitcoinAtual
+ * @param blocoAtual
+ */
 void insereBlocoOrdenadoDepois(BlocoOrdenado *blocoOrdenadoAtual, int totalBitcoinAtual, BlocoMinerado *blocoAtual)
 {
   BlocoOrdenado *novoBlocoOrdenado = malloc(sizeof(BlocoOrdenado));
@@ -326,6 +391,13 @@ void insereBlocoOrdenadoDepois(BlocoOrdenado *blocoOrdenadoAtual, int totalBitco
   blocoOrdenadoAtual->prox = novoBlocoOrdenado;
 }
 
+/**
+ * @brief Insere bloco ordenado no fim
+ *
+ * @param ultimoBloco
+ * @param totalBitcoinAtual
+ * @param blocoAtual
+ */
 void insereBlocoOrdenadoFim(BlocoOrdenado *ultimoBloco, int totalBitcoinAtual, BlocoMinerado *blocoAtual)
 {
   BlocoOrdenado *novoBlocoOrdenado = malloc(sizeof(BlocoOrdenado));
