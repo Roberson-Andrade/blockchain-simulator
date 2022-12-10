@@ -34,9 +34,7 @@ struct BlocoOrdenado
 typedef struct BlocoOrdenado BlocoOrdenado;
 
 void imprimeHash(unsigned char hash[], int length);
-void minerarBloco();
 void calculaTransacoes(BlocoNaoMinerado *blocoAMinerar, MTRand *randNumber);
-void preencheHashAnterior(BlocoNaoMinerado *blocoAMinerar);
 void mineraBlocos(BlocoMinerado **primeiroBloco);
 void validaBloco(BlocoNaoMinerado *blocoAMinerar, BlocoMinerado **primeiroBloco);
 void insereBlocoMinerado(BlocoMinerado **primeiroBloco, BlocoNaoMinerado blocoRecemMinerado, unsigned char hash[]);
@@ -57,7 +55,7 @@ int main()
   BlocoOrdenado *primeiroBlocoOrdenado = NULL;
 
   mineraBlocos(&primeiroBloco);
-  ordenaBlocoEmOrdemCrescente(primeiroBloco, &primeiroBlocoOrdenado);
+  (primeiroBloco, &primeiroBlocoOrdenado);
 
   int escolha;
 
